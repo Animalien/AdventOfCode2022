@@ -10,11 +10,11 @@ public:
 
     virtual void Run() override
     {
-        RunOnData("Day2Example.txt");
-        RunOnData("Day2Input.txt");
+        RunOnData("Day2Example.txt", true);
+        RunOnData("Day2Input.txt", false);
     }
 
-    void RunOnData(const char* filename)
+    void RunOnData(const char* filename, bool verbose)
     {
         printf("For file '%s'...\n", filename);
 
@@ -32,11 +32,13 @@ public:
 
             const BigInt scoreForWhatIPlayed = ScoreForWhatIPlayed(line[2]);
             thisLineScore += scoreForWhatIPlayed;
-            printf("Scored %lld for what I played, ", scoreForWhatIPlayed);
+            if (verbose)
+                printf("Scored %lld for what I played, ", scoreForWhatIPlayed);
 
-            const BigInt scoreForDidIWin = ScoreForDidIWin(line[0], line[2]);
+            const BigInt scoreForDidIWin = ScoreForDidIWin(line[0], line[2], verbose);
             thisLineScore += scoreForDidIWin;
-            printf("scored %lld for did I win;  total = %lld\n", scoreForDidIWin, thisLineScore);
+            if (verbose)
+                printf("scored %lld for did I win;  total = %lld\n", scoreForDidIWin, thisLineScore);
 
             score += thisLineScore;
 
@@ -45,14 +47,17 @@ public:
             BigInt thisLinePartTwoScore = 0;
             
             const BigInt partTwoDesiredResultNumber = PartTwoGetDesiredResultNumber(line[2]);
-            printf("Part Two:  desiredResultNumber = %lld, ", partTwoDesiredResultNumber);
+            if (verbose)
+                printf("Part Two:  desiredResultNumber = %lld, ", partTwoDesiredResultNumber);
             const BigInt partTwoChoiceScore = PartTwoWhatIsMyChoiceScore(line[0], partTwoDesiredResultNumber);
             thisLinePartTwoScore += partTwoChoiceScore;
-            printf("scored %lld for what I played, ", partTwoChoiceScore);
+            if (verbose)
+                printf("scored %lld for what I played, ", partTwoChoiceScore);
 
             const BigInt partTwoDesiredResultScore = PartTwoDesiredResultScore(partTwoDesiredResultNumber);
             thisLinePartTwoScore += partTwoDesiredResultScore;
-            printf("scored %lld for the desired result;  total = %lld\n", partTwoDesiredResultScore, thisLinePartTwoScore);
+            if (verbose)
+                printf("scored %lld for the desired result;  total = %lld\n", partTwoDesiredResultScore, thisLinePartTwoScore);
 
             partTwoScore += thisLinePartTwoScore;
         }
@@ -61,13 +66,14 @@ public:
     }
 
     static BigInt ScoreForWhatIPlayed(char played) { return ((BigInt)(played - 'X')) + 1; }
-    static BigInt ScoreForDidIWin(char theyPlayed, char iPlayed)
+    static BigInt ScoreForDidIWin(char theyPlayed, char iPlayed, bool verbose)
     {
         const BigInt theirNumber = (BigInt)(theyPlayed - 'A');
         const BigInt myNumber = (BigInt)(iPlayed - 'X');
         const BigInt relative = QuickMod3(myNumber + 3 - theirNumber);
         static const BigInt s_scoreForRelative[3] = { 3, 6, 0 };
-        printf("(%lld %lld %lld %lld), ", theirNumber, myNumber, relative, s_scoreForRelative[relative]);
+        if (verbose)
+            printf("(%lld %lld %lld %lld), ", theirNumber, myNumber, relative, s_scoreForRelative[relative]);
         return s_scoreForRelative[relative];
     }
 

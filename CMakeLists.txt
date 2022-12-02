@@ -6,6 +6,8 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 add_executable(AdventOfCode2022
 	AdventOfCode2022.cpp
+	AdventOfCode2022.h
+	Problem1.cpp
 	_clang-format
 )
 

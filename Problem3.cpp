@@ -58,7 +58,7 @@ public:
     };
 
     void RunOnData(const char* filename, bool verbose)
-	{
+    {
         printf("For file '%s'...\n", filename);
 
         StringList lines;

@@ -1,5 +1,5 @@
 ///////////////////////////
-// Problem # - Name
+// Problem 2 - Rock Paper Scissors
 
 #include "AdventOfCode2022.h"
 

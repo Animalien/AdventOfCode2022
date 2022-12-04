@@ -6,10 +6,10 @@
 class Problem3 : public ProblemBase
 {
 public:
-	virtual int GetProblemNum() const override { return 3; }
+    virtual int GetProblemNum() const override { return 3; }
 
-	virtual void Run() override
-	{
+    virtual void Run() override
+    {
         RunOnData("Day3Example.txt", true);
         RunOnData("Day3Input.txt", false);
     }

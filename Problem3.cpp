@@ -18,24 +18,19 @@ public:
     {
     public:
         ItemSet()
-            : m_currentCounter(1)
-        {
-            for (BigInt i = 0; i < NUM_ITEMTYPES; ++i)
-            {
-                m_itemCounters[i] = 0;
-            }
-        }
+            : m_flags(0)
+        {}
 
         void AddItemToSet(char item)
         {
-            m_itemCounters[FindItemIndex(item)] = m_currentCounter;
+            m_flags |= (1ULL << FindItemIndex(item));
         }
-        void Reset() { ++m_currentCounter; }
+        void Reset() { m_flags = 0; }
 
         BigInt GetPriorityIfInSet(char item) const
         {
             const BigInt itemIndex = FindItemIndex(item);
-            if (m_itemCounters[itemIndex] < m_currentCounter)
+            if (!(m_flags & (1ULL << itemIndex)))
                 return 0;
 
             // priority "happens to be" the index + 1
@@ -43,10 +38,8 @@ public:
         }
 
     private:
-        BigInt m_currentCounter = 1;
         static const BigInt NUM_LETTERS = 26;
-        static const BigInt NUM_ITEMTYPES = NUM_LETTERS * 2;
-        BigInt m_itemCounters[NUM_ITEMTYPES];
+        BigUInt m_flags = 0;
 
         static BigInt FindItemIndex(char item)
         {

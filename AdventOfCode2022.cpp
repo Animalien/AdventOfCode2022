@@ -25,10 +25,10 @@ void ReadFileLines(const char* fileName, StringList& lines)
     assert(pFile);
 
     char string[1024];
-    BigInt len;
     for (;;)
     {
         const char* fgetsRet = nullptr;
+        BigInt len = 0;
         bool pushed = false;
         do
         {

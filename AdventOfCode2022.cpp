@@ -15,8 +15,8 @@ FactorizationCache g_factorizationCache;
 
 void ReadFileLines(const char* fileName, StringList& lines)
 {
-	static const char* fileNameBase = "..\\Input\\";
-	
+    static const char* fileNameBase = "..\\Input\\";
+
     lines.clear();
 
     std::string fullFileName = fileNameBase;
@@ -25,18 +25,33 @@ void ReadFileLines(const char* fileName, StringList& lines)
     assert(pFile);
 
     char string[1024];
+    BigInt len;
     for (;;)
     {
-        const char* fgetsRet = fgets(string, sizeof(string), pFile);
-        if (!fgetsRet)
-            break;
+        const char* fgetsRet = nullptr;
+        bool pushed = false;
+        do
+        {
+            fgetsRet = fgets(string, sizeof(string), pFile);
+            if (!fgetsRet)
+                break;
 
-        const BigInt len = strlen(string);
-        if ((len > 0) && (string[len - 1] == '\n'))
-            string[len - 1] = 0;
-        lines.push_back(string);
+            len = strlen(string);
+            if ((len > 0) && (string[len - 1] == '\n'))
+                string[len - 1] = 0;
 
-        if (feof(pFile))
+            if (!pushed)
+            {
+                lines.push_back(string);
+                pushed = true;
+            }
+            else
+            {
+                lines.back() += string;
+            }
+        } while (len >= (BigInt)(sizeof(string) - 1));
+
+        if (!fgetsRet || feof(pFile))
             break;
     }
 
@@ -171,10 +186,10 @@ int main(int argc, char** argv)
 
     const int problemNum = atoi(argv[1]);
     if (!ProblemRegistry::RunProblem(problemNum))
-	{
-		printf("Invalid problem # %d!\n\n", problemNum);
-		return 0;
-	}
-	
+    {
+        printf("Invalid problem # %d!\n\n", problemNum);
+        return 0;
+    }
+
     return 0;
 }

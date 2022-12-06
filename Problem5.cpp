@@ -1,5 +1,5 @@
 ///////////////////////////
-// Problem 5 - Name
+// Problem 5 - Supply Stacks
 
 #include "AdventOfCode2022.h"
 

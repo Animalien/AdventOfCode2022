@@ -62,12 +62,19 @@ public:
             PrintDir(indent, rootDir);
         }
 
-        BigInt CalcTotalSizeDirsAtSizeLimit(BigInt sizeLimit, bool verbose)
+        void CalcTotalSizeDirsAtSizeLimit(BigInt sizeLimit, BigInt& totalSize, BigInt& totalAtSizeLimit, bool verbose)
         {
-            BigInt totalSize = 0;
-            BigInt totalAtSizeLimit = 0;
+            totalSize = 0;
+            totalAtSizeLimit = 0;
             CalcTotalSizeDirsAtSizeLimit(rootDir, sizeLimit, totalSize, totalAtSizeLimit, verbose);
-            return totalAtSizeLimit;
+        }
+
+        BigInt CalcSizeOfSmallestDirToFreeUpSpace(BigInt spaceToFreeUp, bool verbose)
+        {
+            BigInt smallestDirSize = -1;
+            BigInt totalSize = 0;
+            CalcSizeOfSmallestDirToFreeUpSpace(rootDir, spaceToFreeUp, smallestDirSize, totalSize, verbose);
+            return smallestDirSize;
         }
 
     private:
@@ -130,6 +137,34 @@ public:
                     printf("  is <= %lld, so it adds to running total at size limit\n", sizeLimit);
             }
         }
+
+        void CalcSizeOfSmallestDirToFreeUpSpace(
+            const Directory& dir, BigInt spaceToFreeUp, BigInt& smallestDirSize, BigInt& totalSize, bool verbose)
+        {
+            totalSize = 0;
+
+            for (const auto& fileNode: dir.files)
+            {
+                totalSize += fileNode.second;
+            }
+
+            for (const auto& dirNode: dir.dirs)
+            {
+                BigInt subDirTotal = 0;
+                CalcSizeOfSmallestDirToFreeUpSpace(
+                    dirNode.second, spaceToFreeUp, smallestDirSize, subDirTotal, verbose);
+                totalSize += subDirTotal;
+            }
+
+            if (verbose)
+                printf("dir %s has total of %lld\n", dir.name.c_str(), totalSize);
+            if ((totalSize >= spaceToFreeUp) && ((smallestDirSize < 0) || (totalSize < smallestDirSize)))
+            {
+                if (verbose)
+                    printf("  is >= %lld and < %lld, so it becomes our new selected size\n", spaceToFreeUp, smallestDirSize);
+                smallestDirSize = totalSize;
+            }
+        }
     };
 
     void RunOnData(const char* filename, bool verbose)
@@ -170,8 +205,29 @@ public:
         if (verbose)
             fs.PrintTree();
 
-        const BigInt totalAtSizeLimit = fs.CalcTotalSizeDirsAtSizeLimit(100000, verbose);
+        BigInt totalSize = 0;
+        BigInt totalAtSizeLimit = 0;
+        fs.CalcTotalSizeDirsAtSizeLimit(100000, totalSize, totalAtSizeLimit, verbose);
         printf("Total at size limit = %lld\n\n", totalAtSizeLimit);
+
+        const BigInt totalCapacity = 70000000LL;
+        const BigInt needUnusedSpace = 30000000LL;
+        const BigInt currentFreeSpace = totalCapacity - totalSize;
+        const BigInt spaceToFreeUp = needUnusedSpace - currentFreeSpace;
+        printf(
+            "Need %lld unused space out of total capacity %lld.  Current total space taken = %lld, current free space = %lld.  Space to free up = %lld - %lld = %lld\n",
+            needUnusedSpace,
+            totalCapacity,
+            totalSize,
+            currentFreeSpace,
+            needUnusedSpace,
+            currentFreeSpace,
+            spaceToFreeUp);
+
+        const BigInt smallestDirSizeToFreeUp = fs.CalcSizeOfSmallestDirToFreeUpSpace(spaceToFreeUp, verbose);
+        printf(
+            "Found smallest directory to delete in order to free up the required space.  Dir size = %lld\n",
+            smallestDirSizeToFreeUp);
     }
 };
 

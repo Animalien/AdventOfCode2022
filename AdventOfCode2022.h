@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <stack>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>

@@ -23,7 +23,7 @@ private:
         SOUTH,
     };
 
-    typedef std::vector<uint8_t> TreeStatusGridRow;
+    typedef std::vector<bool> TreeStatusGridRow;
     typedef std::vector<TreeStatusGridRow> TreeStatusGrid;
 
     void RunOnData(const char* filename, bool verbose)
@@ -42,7 +42,7 @@ private:
         treeStatusGrid.resize(gridSizeY);
         for (TreeStatusGridRow& row: treeStatusGrid)
         {
-            row.resize(gridSizeX, 0);
+            row.resize(gridSizeX, false);
         }
 
         // recurse through trees, tracing visibility and taking advantage of previous visibility calculations where possible to shortcut checks
@@ -58,35 +58,16 @@ private:
 
                 const char sourceHeight = lines[treeY][treeX];
 
-                bool isVisible = false;
-
-                if (TraceForVisibility(gridSizeX, gridSizeY, lines, treeStatusGrid, treeX, treeY, WEST, sourceHeight, verbose))
-                {
-                    isVisible = true;
-                    treeStatusGrid[treeY][treeX] |= (1 << WEST);
-                }
-
-                if (TraceForVisibility(gridSizeX, gridSizeY, lines, treeStatusGrid, treeX, treeY, NORTH, sourceHeight, verbose))
-                {
-                    isVisible = true;
-                    treeStatusGrid[treeY][treeX] |= (1 << NORTH);
-                }
-
-                if (TraceForVisibility(gridSizeX, gridSizeY, lines, treeStatusGrid, treeX, treeY, EAST, sourceHeight, verbose))
-                {
-                    isVisible = true;
-                    treeStatusGrid[treeY][treeX] |= (1 << EAST);
-                }
-
-                if (TraceForVisibility(gridSizeX, gridSizeY, lines, treeStatusGrid, treeX, treeY, SOUTH, sourceHeight, verbose))
-                {
-                    isVisible = true;
-                    treeStatusGrid[treeY][treeX] |= (1 << SOUTH);
-                }
+                const bool isVisible =
+                    TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, WEST, sourceHeight, verbose)
+                    || TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, NORTH, sourceHeight, verbose)
+                    || TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, EAST, sourceHeight, verbose)
+                    || TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, SOUTH, sourceHeight, verbose);
 
                 if (isVisible)
                 {
                     ++totalNumVisibleTrees;
+                    treeStatusGrid[treeY][treeX] = true;
 
                     if (verbose)
                         printf("  Tree is VISIBLE.  total num visible = %lld\n", totalNumVisibleTrees);
@@ -109,7 +90,7 @@ private:
                 printf("  ");
                 for (BigInt treeX = 0; treeX < gridSizeX; ++treeX)
                 {
-                    printf("%02u", treeStatusGrid[treeY][treeX]);
+                    printf("%c", treeStatusGrid[treeY][treeX] ? (int)'1' : (int)'0');
                 }
                 printf("\n");
             }
@@ -121,7 +102,6 @@ private:
         BigInt gridSizeX,
         BigInt gridSizeY,
         const StringList& lines,
-        const TreeStatusGrid& treeStatusGrid,
         BigInt currX,
         BigInt currY,
         Direction stepDir,
@@ -162,17 +142,10 @@ private:
                     (int)lines[currY][currX],
                     (int)sourceHeight);
         }
-        else if (treeStatusGrid[currY][currX] & (1 << stepDir))
-        {
-            steppedCellIsVisible = true;
-            if (verbose)
-                printf(
-                    "  reached a tree which was already determined to be visible in the step direction, so visibility is TRUE!\n");
-        }
         else
         {
             steppedCellIsVisible =
-                TraceForVisibility(gridSizeX, gridSizeY, lines, treeStatusGrid, currX, currY, stepDir, sourceHeight, verbose);
+                TraceForVisibility(gridSizeX, gridSizeY, lines, currX, currY, stepDir, sourceHeight, verbose);
         }
 
         return steppedCellIsVisible;

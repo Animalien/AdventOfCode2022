@@ -23,8 +23,11 @@ private:
         SOUTH,
     };
 
-    typedef std::vector<bool> TreeStatusGridRow;
-    typedef std::vector<TreeStatusGridRow> TreeStatusGrid;
+    typedef std::vector<bool> TreeVisGridRow;
+    typedef std::vector<TreeVisGridRow> TreeVisGrid;
+
+    typedef std::vector<BigInt> TreeScoreGridRow;
+    typedef std::vector<TreeScoreGridRow> TreeScoreGrid;
 
     void RunOnData(const char* filename, bool verbose)
     {
@@ -36,18 +39,26 @@ private:
         const BigInt gridSizeX = (BigInt)lines[0].length();
         const BigInt gridSizeY = (BigInt)lines.size();
 
-        // initialize status grid
+        // initialize tree vis and score grids
 
-        TreeStatusGrid treeStatusGrid;
-        treeStatusGrid.resize(gridSizeY);
-        for (TreeStatusGridRow& row: treeStatusGrid)
+        TreeVisGrid treeVisGrid;
+        treeVisGrid.resize(gridSizeY);
+        for (TreeVisGridRow& row: treeVisGrid)
         {
             row.resize(gridSizeX, false);
+        }
+
+        TreeScoreGrid treeScoreGrid;
+        treeScoreGrid.resize(gridSizeY);
+        for (TreeScoreGridRow& row: treeScoreGrid)
+        {
+            row.resize(gridSizeX, 0);
         }
 
         // recurse through trees, tracing visibility and taking advantage of previous visibility calculations where possible to shortcut checks
 
         BigInt totalNumVisibleTrees = 0;
+        BigInt largestTreeScore = 0;
 
         for (BigInt treeY = 0; treeY < gridSizeY; ++treeY)
         {
@@ -58,16 +69,38 @@ private:
 
                 const char sourceHeight = lines[treeY][treeX];
 
-                const bool isVisible =
-                    TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, WEST, sourceHeight, verbose)
-                    || TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, NORTH, sourceHeight, verbose)
-                    || TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, EAST, sourceHeight, verbose)
-                    || TraceForVisibility(gridSizeX, gridSizeY, lines, treeX, treeY, SOUTH, sourceHeight, verbose);
+                bool isVisible = false;
+                BigInt treeScore = 1;
+                BigInt treeScoreDir = 0;
+
+                isVisible |= TraceFromTree(gridSizeX, gridSizeY, lines, treeX, treeY, WEST, sourceHeight, treeScoreDir, verbose);
+                treeScore *= treeScoreDir;
+                treeScoreDir = 0;
+                if (verbose)
+                    printf("  Score in WEST direction = %lld\n", treeScoreDir);
+
+                isVisible |= TraceFromTree(gridSizeX, gridSizeY, lines, treeX, treeY, NORTH, sourceHeight, treeScoreDir, verbose);
+                treeScore *= treeScoreDir;
+                treeScoreDir = 0;
+                if (verbose)
+                    printf("  Score in NORTH direction = %lld\n", treeScoreDir);
+
+                isVisible |= TraceFromTree(gridSizeX, gridSizeY, lines, treeX, treeY, EAST, sourceHeight, treeScoreDir, verbose);
+                treeScore *= treeScoreDir;
+                treeScoreDir = 0;
+                if (verbose)
+                    printf("  Score in EAST direction = %lld\n", treeScoreDir);
+
+                isVisible |= TraceFromTree(gridSizeX, gridSizeY, lines, treeX, treeY, SOUTH, sourceHeight, treeScoreDir, verbose);
+                treeScore *= treeScoreDir;
+                treeScoreDir = 0;
+                if (verbose)
+                    printf("  Score in SOUTH direction = %lld\n", treeScoreDir);
 
                 if (isVisible)
                 {
                     ++totalNumVisibleTrees;
-                    treeStatusGrid[treeY][treeX] = true;
+                    treeVisGrid[treeY][treeX] = true;
 
                     if (verbose)
                         printf("  Tree is VISIBLE.  total num visible = %lld\n", totalNumVisibleTrees);
@@ -77,10 +110,22 @@ private:
                     if (verbose)
                         printf("  Tree is NOT visible.  total num visible = %lld\n", totalNumVisibleTrees);
                 }
+
+                if (verbose)
+                    printf("  Tree score = %lld\n", treeScore);
+
+                treeScoreGrid[treeY][treeX] = treeScore;
+                if (treeScore > largestTreeScore)
+                {
+                    largestTreeScore = treeScore;
+                    if (verbose)
+                        printf("  This is the largest tree score so far!\n");
+                }
             }
         }
 
         printf("Total number of visible trees = %lld\n", totalNumVisibleTrees);
+        printf("Largest tree score = %lld\n\n", largestTreeScore);
 
         if (verbose)
         {
@@ -90,15 +135,27 @@ private:
                 printf("  ");
                 for (BigInt treeX = 0; treeX < gridSizeX; ++treeX)
                 {
-                    printf("%c", treeStatusGrid[treeY][treeX] ? (int)'1' : (int)'0');
+                    printf("%c", treeVisGrid[treeY][treeX] ? (int)'1' : (int)'0');
                 }
                 printf("\n");
             }
             printf("\n");
+
+            printf("Tree scores:\n");
+            for (BigInt treeY = 0; treeY < gridSizeY; ++treeY)
+            {
+                printf("  ");
+                for (BigInt treeX = 0; treeX < gridSizeX; ++treeX)
+                {
+                    printf("%lld ", treeScoreGrid[treeY][treeX]);
+                }
+                printf("\n");
+            }
+            printf("\n\n");
         }
     }
 
-    bool TraceForVisibility(
+    bool TraceFromTree(
         BigInt gridSizeX,
         BigInt gridSizeY,
         const StringList& lines,
@@ -106,6 +163,7 @@ private:
         BigInt currY,
         Direction stepDir,
         char sourceHeight,
+        BigInt& treeScore,
         bool verbose)
     {
         static const BigInt s_stepXList[] = { -1, 0, +1, 0 };
@@ -121,6 +179,7 @@ private:
             printf("  stepping in direction <%lld,%lld> to cell <%lld,%lld>\n", stepX, stepY, currX, currY);
 
         bool steppedCellIsVisible = false;
+        BigInt steppedCellScore = 0;
 
         if ((currX < 0) || (currX >= gridSizeX))
         {
@@ -136,6 +195,7 @@ private:
         }
         else if (lines[currY][currX] >= sourceHeight)
         {
+            steppedCellScore = 1;
             if (verbose)
                 printf(
                     "  reached a tree which has height %c >= source height %c, so visibility is FALSE!\n",
@@ -145,8 +205,13 @@ private:
         else
         {
             steppedCellIsVisible =
-                TraceForVisibility(gridSizeX, gridSizeY, lines, currX, currY, stepDir, sourceHeight, verbose);
+                TraceFromTree(gridSizeX, gridSizeY, lines, currX, currY, stepDir, sourceHeight, steppedCellScore, verbose);
+            
+            // don't forget to include this tree
+            ++steppedCellScore;
         }
+
+        treeScore += steppedCellScore;
 
         return steppedCellIsVisible;
     }

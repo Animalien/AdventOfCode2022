@@ -10,11 +10,104 @@ public:
 
     virtual void Run() override
     {
-        RunOnData("Day9Example.txt", true);
-        RunOnData("Day9Input.txt", false);
+        RunOnData("Day9Example.txt", 2, true);
+
+        RunOnData("Day9Example.txt", 10, true);
+        RunOnData("Day9Example2.txt", 10, true);
+
+        RunOnData("Day9Input.txt", 2, false);
+        RunOnData("Day9Input.txt", 10, false);
     }
 
 private:
+    class Rope
+    {
+    public:
+        Rope(BigInt numKnots, BigInt startX, BigInt startY)
+        {
+            m_xList.resize(numKnots, startX);
+            m_yList.resize(numKnots, startY);
+        }
+
+        BigInt GetNumKnots() const { return (BigInt)m_xList.size(); }
+
+        void GetKnotPos(BigInt knotIndex, BigInt& x, BigInt& y) const
+        {
+            x = m_xList[knotIndex];
+            y = m_yList[knotIndex];
+        }
+
+        void StepHead(BigInt stepX, BigInt stepY)
+        {
+            m_xList[0] += stepX;
+            m_yList[0] += stepY;
+
+            for (BigInt knotIndex = 1; knotIndex < (BigInt)m_xList.size(); ++knotIndex)
+                StepKnot(knotIndex);
+        }
+
+        bool GetCharForLocation(BigInt x, BigInt y, char& ch) const
+        {
+            for (BigInt knotIndex = 0; knotIndex < (BigInt)m_xList.size(); ++knotIndex)
+            {
+                if ((x == m_xList[knotIndex]) && (y == m_yList[knotIndex]))
+                {
+                    if (knotIndex == 0)
+                        ch = 'H';
+                    else if (knotIndex == ((BigInt)m_xList.size() - 1))
+                        ch = 'T';
+                    else
+                        ch = (char)('0' + knotIndex);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+    private:
+        void StepKnot(BigInt knotIndex)
+        {
+            const BigInt diffX = m_xList[knotIndex - 1] - m_xList[knotIndex];
+            const BigInt diffY = m_yList[knotIndex - 1] - m_yList[knotIndex];
+            if (diffX < -1)
+            {
+                --m_xList[knotIndex];
+                if (diffY < 0)
+                    --m_yList[knotIndex];
+                else if (diffY > 0)
+                    ++m_yList[knotIndex];
+            }
+            else if (diffX > +1)
+            {
+                ++m_xList[knotIndex];
+                if (diffY < 0)
+                    --m_yList[knotIndex];
+                else if (diffY > 0)
+                    ++m_yList[knotIndex];
+            }
+            else if (diffY < -1)
+            {
+                --m_yList[knotIndex];
+                if (diffX < 0)
+                    --m_xList[knotIndex];
+                else if (diffX > 0)
+                    ++m_xList[knotIndex];
+            }
+            else if (diffY > +1)
+            {
+                ++m_yList[knotIndex];
+                if (diffX < 0)
+                    --m_xList[knotIndex];
+                else if (diffX > 0)
+                    ++m_xList[knotIndex];
+            }
+        }
+
+        std::vector<BigInt> m_xList;
+        std::vector<BigInt> m_yList;
+    };
+
     class Board
     {
     public:
@@ -27,15 +120,27 @@ private:
 
         void GetStartPos(BigInt& x, BigInt& y) const { x = y = START_POS; }
 
-        bool MarkVisited(BigInt x, BigInt y)
+        bool MarkVisited(const Rope& rope)
         {
+            BigInt knotIndex = 0;
+            BigInt x = 0;
+            BigInt y = 0;
+            const BigInt penultimateKnotIndex = rope.GetNumKnots() - 2;
+            for (; knotIndex <= penultimateKnotIndex; ++knotIndex)
+            {
+                rope.GetKnotPos(knotIndex, x, y);
+                UpdateMinMax(x, y);
+            }
+
+            rope.GetKnotPos(knotIndex, x, y);
+            UpdateMinMax(x, y);
             const bool prevVisited = m_currBoard[y][x];
             m_currBoard[y][x] = true;
-            UpdateMinMax(x, y);
+
             return prevVisited;
         }
 
-        void Print(BigInt headX, BigInt headY, BigInt tailX, BigInt tailY)
+        void Print(const Rope& rope)
         {
             printf("Curr board:\n");
             for (BigInt y = m_minVisitedY; y <= m_maxVisitedY; ++y)
@@ -43,12 +148,9 @@ private:
                 printf("  ");
                 for (BigInt x = m_minVisitedX; x <= m_maxVisitedX; ++x)
                 {
-                    if ((x == headX) && (y == headY))
-                        printf("H");
-                    else if ((x == tailX) && (y == tailY))
-                        printf("T");
-                    else if ((x == START_POS) && (y == START_POS))
-                        printf("s");
+                    char ch;
+                    if (rope.GetCharForLocation(x, y, ch))
+                        printf("%c", (int)ch);
                     else if (m_currBoard[y][x])
                         printf("#");
                     else
@@ -83,25 +185,21 @@ private:
         BigInt m_maxVisitedY = START_POS;
     };
 
-    void RunOnData(const char* filename, bool verbose)
+    void RunOnData(const char* filename, BigInt numKnots, bool verbose)
     {
-        printf("For file '%s'...\n", filename);
+        printf("For file '%s', with rope with %lld knots...\n", filename, numKnots);
 
         StringList lines;
         ReadFileLines(filename, lines);
 
+        BigInt startX = 0;
+        BigInt startY = 0;
         Board board;
-
-        BigInt headX = 0;
-        BigInt headY = 0;
-        BigInt tailX = 0;
-        BigInt tailY = 0;
-
-        board.GetStartPos(headX, headY);
-        board.GetStartPos(tailX, tailY);
-
-        board.MarkVisited(tailX, tailY);
+        board.GetStartPos(startX, startY);
         BigInt numVisitedLocations = 1;
+
+        Rope rope(numKnots, startX, startY);
+        board.MarkVisited(rope);
 
         for (const std::string& line: lines)
         {
@@ -119,57 +217,9 @@ private:
 
             for (BigInt i = 0; i < numSteps; ++i)
             {
-                if (verbose)
-                    printf("  Head goes from <%lld,%lld> to ", headX, headY);
+                rope.StepHead(stepX, stepY);
 
-                headX += stepX;
-                headY += stepY;
-
-                if (verbose)
-                    printf("<%lld,%lld>\n  Tail goes from <%lld,%lld> to ", headX, headY, tailX, tailY);
-
-                const BigInt diffX = headX - tailX;
-                const BigInt diffY = headY - tailY;
-                if (diffX < -1)
-                {
-                    --tailX;
-                    if (diffY < 0)
-                        --tailY;
-                    else if (diffY > 0)
-                        ++tailY;
-                }
-                else if (diffX > +1)
-                {
-                    ++tailX;
-                    if (diffY < 0)
-                        --tailY;
-                    else if (diffY > 0)
-                        ++tailY;
-                }
-                else if (diffY < -1)
-                {
-                    --tailY;
-                    if (diffX < 0)
-                        --tailX;
-                    else if (diffX > 0)
-                        ++tailX;
-                }
-                else if (diffY > +1)
-                {
-                    ++tailY;
-                    if (diffX < 0)
-                        --tailX;
-                    else if (diffX > 0)
-                        ++tailX;
-                }
-
-                if (verbose)
-                    printf("<%lld,%lld>\n", tailX, tailY);
-
-                if ((std::abs(headX - tailX) > 1) || (std::abs(headY - tailY) > 1))
-                    printf("OH MY GOD!!!!!\n");
-
-                const bool wasPreviouslyVisited = board.MarkVisited(tailX, tailY);
+                const bool wasPreviouslyVisited = board.MarkVisited(rope);
                 if (!wasPreviouslyVisited)
                 {
                     ++numVisitedLocations;
@@ -180,7 +230,7 @@ private:
                 if (verbose)
                 {
                     printf("\n");
-                    board.Print(headX, headY, tailX, tailY);
+                    board.Print(rope);
                 }
             }
         }
@@ -188,7 +238,6 @@ private:
         printf("Num visited locations = %lld\n\n", numVisitedLocations);
     }
 
-    static BigInt CalcCoordValue(BigInt x, BigInt y) { return (y << 32) | x; };
     static void GetDirStep(char dir, BigInt& stepX, BigInt& stepY)
     {
         switch (dir)
@@ -212,13 +261,6 @@ private:
             default:
                 break;
         }
-    }
-    static void AdjustVisitedMinMax(BigInt& min, BigInt& max, BigInt curr)
-    {
-        if (curr < min)
-            min = curr;
-        if (curr > max)
-            max = curr;
     }
 };
 

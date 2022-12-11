@@ -90,7 +90,6 @@ private:
             for (BigInt index = Two; index < NUM_PRIMES; ++index)
             {
                 PrimeRelativeNumber& prn = m_primeRels[index];
-                prn.InitPrime(s_primeNumbers[index]);
                 prn.SetToValue(num);
             }
             return *this;

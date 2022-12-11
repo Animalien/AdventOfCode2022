@@ -10,9 +10,9 @@ public:
 
     virtual void Run() override
     {
-        RunOnData("Day10Example.txt", true);
-        RunOnData("Day10Example2.txt", false);
-        RunOnData("Day10Input.txt", false);
+        RunOnData("Day10Example.txt", false, true);
+        RunOnData("Day10Example2.txt", true, false);
+        RunOnData("Day10Input.txt", true, false);
     }
 
 private:
@@ -26,6 +26,7 @@ private:
         }
 
         BigInt GetCycleNumber() const { return m_cycleNumber; }
+        BigInt GetRegisterX() const { return m_registerX; }
         BigInt GetSignalStrength() const { return (m_cycleNumber * m_registerX); }
 
         bool StepOneCycle()
@@ -139,11 +140,40 @@ private:
         }
     };
 
-    void RunOnData(const char* filename, bool verbose)
+    class CRT
+    {
+    public:
+        CRT()
+        {
+            m_display.resize(NUM_ROWS);
+            for (std::string& row: m_display)
+                row.resize(ROW_LENGTH, '.');
+        }
+
+        BigInt GetNumRows() const { return NUM_ROWS; }
+        BigInt GetRowLength() const { return ROW_LENGTH; }
+
+        void PlotPixel(BigInt x, BigInt y) { m_display[y][x] = '#'; }
+
+        void Print(const char* indent) const
+        {
+            for (const std::string& row: m_display)
+                printf("%s%s\n", indent, row.c_str());
+        }
+        void PrintRow(const char* indent, BigInt y) { printf("%s%s\n", indent, m_display[y].c_str()); }
+
+    private:
+        static const BigInt NUM_ROWS = 6;
+        static const BigInt ROW_LENGTH = 40;
+        StringList m_display;
+    };
+
+    void RunOnData(const char* filename, bool showCRT, bool verbose)
     {
         printf("For file '%s'...\n", filename);
 
         CPU cpu(filename, verbose);
+        CRT crt;
 
         BigInt sumSignalValues = 0;
         do
@@ -161,9 +191,32 @@ private:
                         signalVal,
                         sumSignalValues);
             }
+
+            if (showCRT)
+            {
+                const BigInt spriteX = cpu.GetRegisterX();
+                const BigInt cycleIndex = cycleNum - 1;
+                const BigInt pixelX = cycleIndex % crt.GetRowLength();
+                const BigInt pixelY = cycleIndex / crt.GetRowLength();
+                if ((pixelX >= 0) && (pixelX < crt.GetRowLength()) && (pixelY >= 0) && (pixelY < crt.GetNumRows()))
+                {
+                    if (std::abs(spriteX - pixelX) <= 1)
+                        crt.PlotPixel(pixelX, pixelY);
+
+                    if (verbose)
+                        crt.PrintRow("  ", pixelY);
+                }
+            }
         } while (cpu.StepOneCycle());
 
         printf("Sum of signal values = %lld\n\n", sumSignalValues);
+
+        if (showCRT)
+        {
+            printf("CRT after run:\n");
+            crt.Print("  ");
+            printf("\n");
+        }
     }
 };
 

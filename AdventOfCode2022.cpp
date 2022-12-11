@@ -66,7 +66,8 @@ void Tokenize(const std::string& st, StringList& tokens, char delim)
     std::string token;
     while (std::getline(stream, token, delim))
     {
-        tokens.push_back(token);
+        if (!token.empty())
+            tokens.push_back(token);
     }
 }
 

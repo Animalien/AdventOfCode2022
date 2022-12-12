@@ -52,7 +52,7 @@ private:
         // Part One
 
         BigInt shortestPath = -1;
-        FindShortestPath(board, startX, startY, endX, endY, shortestPath, false);//verbose);
+        FindShortestPath(board, startX, startY, endX, endY, shortestPath, verbose);
 
         // Part Two
 
@@ -112,71 +112,7 @@ private:
         printf("Found shortest path = %lld\n\n", shortestPath);
 
         if (verbose)
-        {
-            // first trace back through the shortest path, marking the way
-
-            BigInt x = endX;
-            BigInt y = endY;
-            do
-            {
-                const BigInt dirBack = board[y][x].shortestPathEnteredFromDir;
-                assert(dirBack >= 0);
-
-                BigInt stepX = 0;
-                BigInt stepY = 0;
-                GetDirSteps(dirBack, stepX, stepY);
-                assert((stepX != 0) || (stepY != 0));
-
-                x += stepX;
-                y += stepY;
-                board[y][x].shortestPathExitingDir = GetOppositeDir(dirBack);
-            } while ((x != startX) || (y != startY));
-
-            // now show the way
-
-            printf("Board showing path:\n\n");
-
-            for (BigInt y = 0; y < (BigInt)board.size(); ++y)
-            {
-                printf("  ");
-                const BoardRow& boardRow = board[y];
-                for (BigInt x = 0; x < (BigInt)boardRow.size(); ++x)
-                {
-                    const Node& node = boardRow[x];
-                    if (node.isGoal)
-                    {
-                        printf("E");
-                    }
-                    else if (node.shortestPathExitingDir >= 0)
-                    {
-                        switch (node.shortestPathExitingDir)
-                        {
-                            case WEST:
-                                printf("<");
-                                break;
-                            case NORTH:
-                                printf("^");
-                                break;
-                            case EAST:
-                                printf(">");
-                                break;
-                            case SOUTH:
-                                printf("V");
-                                break;
-                            default:
-                                printf("?");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        printf(".");
-                    }
-                }
-                printf("\n");
-            }
-            printf("\n");
-        }
+            MarkUpAndShowShortestPath(board, startX, startY, endX, endY);
     }
 
     void FindShortestPathPartTwo(
@@ -192,71 +128,7 @@ private:
         printf("Found shortest path = %lld, to location <%lld,%lld>\n\n", shortestPath, goalX, goalY);
 
         if (verbose)
-        {
-            // first trace back through the shortest path, marking the way
-
-            BigInt x = goalX;
-            BigInt y = goalY;
-            do
-            {
-                const BigInt dirBack = board[y][x].shortestPathEnteredFromDir;
-                assert(dirBack >= 0);
-
-                BigInt stepX = 0;
-                BigInt stepY = 0;
-                GetDirSteps(dirBack, stepX, stepY);
-                assert((stepX != 0) || (stepY != 0));
-
-                x += stepX;
-                y += stepY;
-                board[y][x].shortestPathExitingDir = GetOppositeDir(dirBack);
-            } while ((x != startX) || (y != startY));
-
-            // now show the way
-
-            printf("Board showing path:\n\n");
-
-            for (BigInt y = 0; y < (BigInt)board.size(); ++y)
-            {
-                printf("  ");
-                const BoardRow& boardRow = board[y];
-                for (BigInt x = 0; x < (BigInt)boardRow.size(); ++x)
-                {
-                    const Node& node = boardRow[x];
-                    if ((x == startX) && (y == startY))
-                    {
-                        printf("E");
-                    }
-                    else if (node.shortestPathExitingDir >= 0)
-                    {
-                        switch (node.shortestPathExitingDir)
-                        {
-                            case WEST:
-                                printf("<");
-                                break;
-                            case NORTH:
-                                printf("^");
-                                break;
-                            case EAST:
-                                printf(">");
-                                break;
-                            case SOUTH:
-                                printf("V");
-                                break;
-                            default:
-                                printf("?");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        printf(".");
-                    }
-                }
-                printf("\n");
-            }
-            printf("\n");
-        }
+            MarkUpAndShowShortestPath(board, startX, startY, goalX, goalY);
     }
 
     void RecursiveExplore(
@@ -346,6 +218,77 @@ private:
                 isReversePath,
                 verbose);
         }
+    }
+
+    void MarkUpAndShowShortestPath(Board& board, BigInt startX, BigInt startY, BigInt endX, BigInt endY)
+    {
+        // first trace back through the shortest path, marking the way
+
+        BigInt x = endX;
+        BigInt y = endY;
+        do
+        {
+            const BigInt dirBack = board[y][x].shortestPathEnteredFromDir;
+            assert(dirBack >= 0);
+
+            BigInt stepX = 0;
+            BigInt stepY = 0;
+            GetDirSteps(dirBack, stepX, stepY);
+            assert((stepX != 0) || (stepY != 0));
+
+            x += stepX;
+            y += stepY;
+            board[y][x].shortestPathExitingDir = GetOppositeDir(dirBack);
+        } while ((x != startX) || (y != startY));
+
+        // now show the way
+
+        printf("Board showing path:\n\n");
+
+        for (BigInt y = 0; y < (BigInt)board.size(); ++y)
+        {
+            printf("  ");
+            const BoardRow& boardRow = board[y];
+            for (BigInt x = 0; x < (BigInt)boardRow.size(); ++x)
+            {
+                const Node& node = boardRow[x];
+                if ((x == startX) && (y == startY))
+                {
+                    printf("S");
+                }
+                else if ((x == endX) && (y == endY))
+                {
+                    printf("E");
+                }
+                else if (node.shortestPathExitingDir >= 0)
+                {
+                    switch (node.shortestPathExitingDir)
+                    {
+                        case WEST:
+                            printf("<");
+                            break;
+                        case NORTH:
+                            printf("^");
+                            break;
+                        case EAST:
+                            printf(">");
+                            break;
+                        case SOUTH:
+                            printf("V");
+                            break;
+                        default:
+                            printf("?");
+                            break;
+                    }
+                }
+                else
+                {
+                    printf(".");
+                }
+            }
+            printf("\n");
+        }
+        printf("\n");
     }
 
     static BigInt QuickMod4(BigInt input) { return input & 3; }

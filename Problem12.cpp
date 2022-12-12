@@ -26,7 +26,6 @@ private:
     struct Node
     {
         BigInt elevation = 0;
-        bool visited = false;
         bool isGoal = false;
         BigInt shortestPathEnteredFromDir = -1;
         BigInt shortestPathToHere = -1;
@@ -50,8 +49,65 @@ private:
         BigInt endY = 0;
         BuildBoardFromLines(lines, board, startX, startY, endX, endY);
 
-        BigInt shortestPath = 0;
-        RecursiveExplore(board, startX, startY, -1, 0, shortestPath, verbose);
+        // Part One
+
+        BigInt shortestPath = -1;
+        FindShortestPath(board, startX, startY, endX, endY, shortestPath, false);//verbose);
+
+        // Part Two
+
+        shortestPath = -1;
+        FindShortestPathPartTwo(board, endX, endY, shortestPath, verbose);
+    }
+
+    void BuildBoardFromLines(const StringList& lines, Board& board, BigInt& startX, BigInt& startY, BigInt& endX, BigInt& endY)
+    {
+        board.clear();
+        board.resize(lines.size());
+
+        for (BigInt y = 0; y < (BigInt)lines.size(); ++y)
+        {
+            const std::string& line = lines[y];
+            BoardRow& boardRow = board[y];
+            boardRow.clear();
+            boardRow.resize(line.length());
+
+            for (BigInt x = 0; x < (BigInt)line.length(); ++x)
+            {
+                const char ch = line[x];
+
+                Node& node = boardRow[x];
+                if (ch == 'S')
+                {
+                    startX = x;
+                    startY = y;
+                }
+                else if (ch == 'E')
+                {
+                    endX = x;
+                    endY = y;
+                    node.elevation = (BigInt)'z' - 'a';
+                    node.isGoal = true;
+                }
+                else
+                {
+                    node.elevation = (BigInt)ch - 'a';
+                }
+            }
+        }
+    }
+
+    void FindShortestPath(
+        const Board& origBoard, BigInt startX, BigInt startY, BigInt endX, BigInt endY, BigInt& shortestPath, bool verbose)
+    {
+        shortestPath = -1;
+
+        Board board = origBoard;
+        BigInt goalX = 0;
+        BigInt goalY = 0;
+        RecursiveExplore(board, startX, startY, -1, 0, shortestPath, goalX, goalY, false /*isReversePath*/, verbose);
+        assert(goalX == endX);
+        assert(goalY == endY);
 
         printf("Found shortest path = %lld\n\n", shortestPath);
 
@@ -123,40 +179,83 @@ private:
         }
     }
 
-    void BuildBoardFromLines(const StringList& lines, Board& board, BigInt& startX, BigInt& startY, BigInt& endX, BigInt& endY)
+    void FindShortestPathPartTwo(
+        const Board& origBoard, BigInt startX, BigInt startY, BigInt& shortestPath, bool verbose)
     {
-        board.clear();
-        board.resize(lines.size());
+        shortestPath = -1;
 
-        for (BigInt y = 0; y < (BigInt)lines.size(); ++y)
+        Board board = origBoard;
+        BigInt goalX = 0;
+        BigInt goalY = 0;
+        RecursiveExplore(board, startX, startY, -1, 0, shortestPath, goalX, goalY, true /*isReversePath*/, verbose);
+
+        printf("Found shortest path = %lld, to location <%lld,%lld>\n\n", shortestPath, goalX, goalY);
+
+        if (verbose)
         {
-            const std::string& line = lines[y];
-            BoardRow& boardRow = board[y];
-            boardRow.clear();
-            boardRow.resize(line.length());
+            // first trace back through the shortest path, marking the way
 
-            for (BigInt x = 0; x < (BigInt)line.length(); ++x)
+            BigInt x = goalX;
+            BigInt y = goalY;
+            do
             {
-                const char ch = line[x];
+                const BigInt dirBack = board[y][x].shortestPathEnteredFromDir;
+                assert(dirBack >= 0);
 
-                Node& node = boardRow[x];
-                if (ch == 'S')
+                BigInt stepX = 0;
+                BigInt stepY = 0;
+                GetDirSteps(dirBack, stepX, stepY);
+                assert((stepX != 0) || (stepY != 0));
+
+                x += stepX;
+                y += stepY;
+                board[y][x].shortestPathExitingDir = GetOppositeDir(dirBack);
+            } while ((x != startX) || (y != startY));
+
+            // now show the way
+
+            printf("Board showing path:\n\n");
+
+            for (BigInt y = 0; y < (BigInt)board.size(); ++y)
+            {
+                printf("  ");
+                const BoardRow& boardRow = board[y];
+                for (BigInt x = 0; x < (BigInt)boardRow.size(); ++x)
                 {
-                    startX = x;
-                    startY = y;
+                    const Node& node = boardRow[x];
+                    if ((x == startX) && (y == startY))
+                    {
+                        printf("E");
+                    }
+                    else if (node.shortestPathExitingDir >= 0)
+                    {
+                        switch (node.shortestPathExitingDir)
+                        {
+                            case WEST:
+                                printf("<");
+                                break;
+                            case NORTH:
+                                printf("^");
+                                break;
+                            case EAST:
+                                printf(">");
+                                break;
+                            case SOUTH:
+                                printf("V");
+                                break;
+                            default:
+                                printf("?");
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        printf(".");
+                    }
                 }
-                else if (ch == 'E')
-                {
-                    endX = x;
-                    endY = y;
-                    node.elevation = (BigInt)'z' - 'a';
-                    node.isGoal = true;
-                }
-                else
-                {
-                    node.elevation = (BigInt)ch - 'a';
-                }
+                printf("\n");
             }
+            printf("\n");
         }
     }
 
@@ -167,11 +266,14 @@ private:
         BigInt dirEntered,
         BigInt pathLengthSoFar,
         BigInt& shortestPath,
+        BigInt& shortestPathGoalX,
+        BigInt& shortestPathGoalY,
+        bool isReversePath,
         bool verbose)
     {
         if (verbose)
             printf("  Exploring node <%lld,%lld>\n", x, y);
-
+        
         Node& currNode = board[y][x];
         if (dirEntered >= 0)
         {
@@ -181,10 +283,13 @@ private:
                 currNode.shortestPathToHere = pathLengthSoFar;
                 currNode.shortestPathEnteredFromDir = dirEntered;
 
-                if (currNode.isGoal)
+                if ((!isReversePath && currNode.isGoal)
+                    || (isReversePath && (currNode.elevation == 0) && ((shortestPath < 0) || (pathLengthSoFar < shortestPath))))
                 {
                     // we found one way to the goal
                     shortestPath = pathLengthSoFar;
+                    shortestPathGoalX = x;
+                    shortestPathGoalY = y;
                     return;
                 }
             }
@@ -222,10 +327,10 @@ private:
 
             const BigInt nextElevation = board[nextY][nextX].elevation;
             const BigInt nextElevationDiff = nextElevation - currNode.elevation;
-            if (nextElevationDiff > 1)
+            if ((!isReversePath && (nextElevationDiff > 1)) || (isReversePath && (nextElevationDiff < -1)))
             {
                 if (verbose)
-                    printf("      Node's elevation %lld is too high compared with current elevation %lld, skipping...\n", nextElevation, currNode.elevation);
+                    printf("      Node's elevation %lld is too %s compared with current elevation %lld, skipping...\n", nextElevation, isReversePath ? "LOW" : "HIGH", currNode.elevation);
                 continue;
             }
 
@@ -236,6 +341,9 @@ private:
                 GetOppositeDir(dir),
                 pathLengthSoFar + 1,
                 shortestPath,
+                shortestPathGoalX,
+                shortestPathGoalY,
+                isReversePath,
                 verbose);
         }
     }

@@ -19,6 +19,7 @@ add_executable(AdventOfCode2022
 	Problem10.cpp
 	Problem11.cpp
 	Problem12.cpp
+	Problem13.cpp
 	_clang-format
 )
 

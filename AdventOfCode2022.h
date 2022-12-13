@@ -1,6 +1,7 @@
 // Hi, this is my AdventOfCode 2022 stuff
 
 #include <assert.h>
+#include <cctype>
 #include <deque>
 #include <limits.h>
 #include <map>

@@ -15,32 +15,9 @@ public:
     }
 
 private:
-    void RunOnData(const char* filename, bool verbose)
-    {
-        printf("For file '%s'...\n", filename);
-
-        StringList lines;
-        ReadFileLines(filename, lines);
-
-        BigInt sumIndicesOfOrderedPairs = 0;
-
-        for (BigInt lineIndex = 0; lineIndex < (BigInt)lines.size(); lineIndex += 3)
-        {
-            if (TwoLinesAreInOrder(lines[lineIndex], lines[lineIndex + 1], verbose))
-            {
-                const BigInt pairIndex = (lineIndex / 3) + 1;
-                sumIndicesOfOrderedPairs += pairIndex;
-
-                if (verbose)
-                    printf("  Pair %lld is in order, so it is added to the running sum\n", pairIndex);
-            }
-        }
-
-        printf("Total sum of indices of ordered pairs = %lld\n\n", sumIndicesOfOrderedPairs);
-    }
-
     struct Node
     {
+        BigInt sourceIndex = -1;
         bool isLiteralValue = false;
         BigInt literalValue = 0;
         std::vector<Node> nodeList;
@@ -58,27 +35,123 @@ private:
         }
     };
 
-    bool TwoLinesAreInOrder(const std::string& leftLine, const std::string& rightLine, bool verbose)
+    void RunOnData(const char* filename, bool verbose)
     {
-        if (verbose)
-            printf("Testing whether these two lines are in order:\n  %s\n  %s\n", leftLine.c_str(), rightLine.c_str());
+        printf("For file '%s'...\n", filename);
 
-        Node left, right;
-        ConvertLineToNode(leftLine, left, verbose);
-        ConvertLineToNode(rightLine, right, verbose);
-        return (CompareTwoNodes(left, right, verbose) < 0);
+        StringList lines;
+        ReadFileLines(filename, lines);
+
+        BigInt sumIndicesOfOrderedPairs = 0;
+
+        const BigInt totalInputNodes = ((lines.size() + 1) / 3) * 2;
+        const BigInt totalNumNodes = totalInputNodes + 2;
+        std::vector<Node> masterNodeList;
+        masterNodeList.resize(totalNumNodes);
+
+        std::vector<const Node*> nodeSortList;
+        nodeSortList.reserve(totalNumNodes);
+        for (Node& node: masterNodeList)
+            nodeSortList.push_back(&node);
+
+        // part 1
+
+        for (BigInt lineIndex = 0, nodeIndex = 0; lineIndex < (BigInt)lines.size(); lineIndex += 3, nodeIndex += 2)
+        {
+            const std::string& leftLine = lines[lineIndex];
+            const std::string& rightLine = lines[lineIndex + 1];
+
+            if (verbose)
+                printf("Testing whether these two lines are in order:\n  %s\n  %s\n", leftLine.c_str(), rightLine.c_str());
+
+            Node& leftNode = masterNodeList[nodeIndex];
+            leftNode.sourceIndex = lineIndex;
+            ConvertLineToNode(leftLine, leftNode, verbose);
+
+            Node& rightNode = masterNodeList[nodeIndex + 1];
+            rightNode.sourceIndex = lineIndex + 1;
+            ConvertLineToNode(rightLine, rightNode, verbose);
+
+            if (CompareTwoNodes(leftNode, rightNode, verbose) < 0)
+            {
+                const BigInt pairIndex = (lineIndex / 3) + 1;
+                sumIndicesOfOrderedPairs += pairIndex;
+
+                if (verbose)
+                    printf("  Pair %lld is in order, so it is added to the running sum\n", pairIndex);
+            }
+        }
+
+        printf("Total sum of indices of ordered pairs = %lld\n\n", sumIndicesOfOrderedPairs);
+
+        // part 2
+
+        // add in the two divider packets
+
+        const char* const dividerPacket1Line = "[[2]]";
+        Node& dividerPacket1 = masterNodeList[totalInputNodes];
+        ConvertLineToNode(dividerPacket1Line, dividerPacket1, verbose);
+
+        const char* const dividerPacket2Line = "[[6]]";
+        Node& dividerPacket2 = masterNodeList[totalInputNodes + 1];
+        ConvertLineToNode(dividerPacket2Line, dividerPacket2, verbose);
+
+        // now sort
+
+        SortNodes(nodeSortList);
+
+        if (verbose)
+            printf("Sorted line list:\n");
+
+        BigInt dividerPacket1SortedIndex = -1;
+        BigInt dividerPacket2SortedIndex = -1;
+        for (BigInt sortedIndex = 0; sortedIndex < (BigInt)nodeSortList.size(); ++sortedIndex)
+        {
+            const Node* node = nodeSortList[sortedIndex];
+
+            if (node == &dividerPacket1)
+            {
+                dividerPacket1SortedIndex = sortedIndex + 1;
+
+                if (verbose)
+                    printf("  %s\n", dividerPacket1Line);
+            }
+            else if (node == &dividerPacket2)
+            {
+                dividerPacket2SortedIndex = sortedIndex + 1;
+
+                if (verbose)
+                    printf("  %s\n", dividerPacket2Line);
+            }
+            else
+            {
+                if (verbose)
+                    printf("  %s\n", lines[node->sourceIndex].c_str());
+            }
+        }
+
+        printf(
+            "Decoder key = %lld * %lld = %lld\n\n",
+            dividerPacket1SortedIndex,
+            dividerPacket2SortedIndex,
+            dividerPacket1SortedIndex * dividerPacket2SortedIndex);
     }
 
-    void ConvertLineToNode(const std::string& line, Node& node, bool verbose)
+    static void ConvertLineToNode(const std::string& line, Node& node, bool verbose)
+    {
+        ConvertLineToNode(line.c_str(), node, verbose);
+    }
+
+    static void ConvertLineToNode(const char* line, Node& node, bool verbose)
     {
         if (verbose)
-            printf("  Converting line %s:\n", line.c_str());
+            printf("  Converting line %s:\n", line);
 
-        const char* s = &line[1];
+        const char* s = line + 1;   // start after the initial [
         RecursiveConvertStringToNode(s, node, verbose);
     }
 
-    void RecursiveConvertStringToNode(const char*& s, Node& node, bool verbose)
+    static void RecursiveConvertStringToNode(const char*& s, Node& node, bool verbose)
     {
         node.nodeList.clear();
         for (;;)
@@ -119,12 +192,12 @@ private:
                 continue;
             }
 
-            assert(*s == ']');  // step past this in the above level
+            assert(*s == ']');   // step past this in the above level
             break;
         }
     }
 
-    void ParseInt(const char*& s, BigInt& num)
+    static void ParseInt(const char*& s, BigInt& num)
     {
         num = 0;
         while (isdigit(*s))
@@ -136,7 +209,7 @@ private:
         }
     }
 
-    BigInt CompareTwoNodes(const Node& left, const Node& right, bool verbose)
+    static BigInt CompareTwoNodes(const Node& left, const Node& right, bool verbose)
     {
         if (left.IsLiteralValue())
         {
@@ -144,9 +217,7 @@ private:
             {
                 if (verbose)
                     printf(
-                        "  left and right are both literals, so comparing %lld vs %lld\n",
-                        left.literalValue,
-                        right.literalValue);
+                        "  left and right are both literals, so comparing %lld vs %lld\n", left.literalValue, right.literalValue);
 
                 if (left.literalValue < right.literalValue)
                     return -1;
@@ -157,8 +228,7 @@ private:
             else
             {
                 if (verbose)
-                    printf(
-                        "  left is literal, right is list, so we have to wrap left and try again\n");
+                    printf("  left is literal, right is list, so we have to wrap left and try again\n");
 
                 return CompareTwoNodes(Node::WrapNode(left), right, verbose);
             }
@@ -175,7 +245,10 @@ private:
             else
             {
                 if (verbose)
-                    printf("  comparing two lists of lengths %lld vs %lld\n", (BigInt)left.nodeList.size(), (BigInt)right.nodeList.size());
+                    printf(
+                        "  comparing two lists of lengths %lld vs %lld\n",
+                        (BigInt)left.nodeList.size(),
+                        (BigInt)right.nodeList.size());
 
                 BigInt index = 0;
                 for (;;)
@@ -228,6 +301,13 @@ private:
             }
         }
     }
+
+    struct NodeSorter
+    {
+        bool operator()(const Node* lhs, const Node* rhs) const { return (CompareTwoNodes(*lhs, *rhs, false) < 0); }
+    };
+
+    void SortNodes(std::vector<const Node*>& nodeSortList) { std::sort(nodeSortList.begin(), nodeSortList.end(), NodeSorter()); }
 };
 
 Problem13 problem13;

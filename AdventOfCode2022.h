@@ -1,5 +1,6 @@
 // Hi, this is my AdventOfCode 2022 stuff
 
+#include <algorithm>
 #include <assert.h>
 #include <cctype>
 #include <deque>

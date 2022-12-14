@@ -14,6 +14,7 @@ public:
         //RunOnData("Day#Input.txt", false);
     }
 
+private:
     void RunOnData(const char* filename, bool verbose)
     {
         printf("For file '%s'...\n", filename);

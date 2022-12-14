@@ -87,6 +87,8 @@ bool ParseNextBigInt(const char*& st, BigInt& num)
 {
     num = 0;
     bool foundNum = false;
+    while (*st && !isdigit(*st))
+        ++st;
     while (isdigit(*st))
     {
         const BigInt digit = (BigInt)*st - '0';

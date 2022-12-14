@@ -32,22 +32,57 @@ private:
 
         InitBoardFromLines(lines, verbose);
 
+        const Board pristineBoard = m_board;
+
+        // part one
+
         BigInt numSandSettled = 0;
         bool fellToMaxY = false;
+        bool cloggedSource = false;
         for (;;)
         {
-            DropOneSand(fellToMaxY, false, verbose);
+            DropOneSand(fellToMaxY, cloggedSource, false, verbose);
+            assert(!cloggedSource); // shouldn't be able to clog the source until part two
+
             if (fellToMaxY)
                 break;
 
             ++numSandSettled;
         }
 
-        DropOneSand(fellToMaxY, true, verbose);
+        DropOneSand(fellToMaxY, cloggedSource, true, verbose);
+        assert(fellToMaxY);         // already fell to it; we are simply tracing the path now
+        assert(!cloggedSource);     // shouldn't be able to clog the source until part two
 
         printf("Num grains of sand settled = %lld\n\n", numSandSettled);
 
         PrintBoard();
+        printf("\n");
+
+        // part two
+
+        m_board = pristineBoard;
+
+        BuildFloor(verbose);
+
+        numSandSettled = 0;
+        fellToMaxY = false;
+        cloggedSource = false;
+        for (;;)
+        {
+            DropOneSand(fellToMaxY, cloggedSource, false, verbose);
+            assert(!fellToMaxY);   // shouldn't be able to fall to max Y in part 2 because of the floor
+
+            ++numSandSettled;
+
+            if (cloggedSource)
+                break;
+        }
+
+        printf("Num grains of sand settled with a floor = %lld\n\n", numSandSettled);
+
+        PrintBoard();
+        printf("\n");
     }
 
     static const BigInt SAND_SOURCE_X = 500;
@@ -104,7 +139,18 @@ private:
             PrintBoard();
     }
 
-    void DropOneSand(bool& fellToMaxY, bool drawPath, bool verbose)
+    void BuildFloor(bool verbose)
+    {
+        ++m_boardMaxY;
+        const BigInt floorY = m_boardMaxY;
+        for (BigInt x = 0; x < (BigInt)m_board[0].length(); ++x)
+            m_board[floorY][x] = '#';   // fill the floor but don't let it alter the mins + maxes anymore
+
+        if (verbose)
+            PrintBoard();
+    }
+
+    void DropOneSand(bool& fellToMaxY, bool& cloggedSource, bool drawPath, bool verbose)
     {
         BigInt x = SAND_SOURCE_X;
         BigInt y = SAND_SOURCE_Y;
@@ -127,6 +173,9 @@ private:
 
         if (!fellToMaxY)
             SetBoardChar(x, y, 'o');
+
+        if ((x == SAND_SOURCE_X) && (y == SAND_SOURCE_Y))
+            cloggedSource = true;
 
         if (verbose)
             PrintBoard();

@@ -18,10 +18,10 @@ private:
     static const BigInt MAX_GRID_SIZE = 1024;
     typedef std::vector<std::string> Board;
     Board m_board;
-    BigInt m_boardMinX = -1;
-    BigInt m_boardMaxX = -1;
-    BigInt m_boardMinY = -1;
-    BigInt m_boardMaxY = -1;
+    BigInt m_boardMinX = MAX_BIG_INT;
+    BigInt m_boardMaxX = MIN_BIG_INT;
+    BigInt m_boardMinY = MAX_BIG_INT;
+    BigInt m_boardMaxY = MIN_BIG_INT;
 
     void RunOnData(const char* filename, bool verbose)
     {
@@ -211,13 +211,13 @@ private:
 
     void AbsorbMinMaxPos(BigInt x, BigInt y)
     {
-        if ((m_boardMinX < 0) || (x < m_boardMinX))
+        if (x < m_boardMinX)
             m_boardMinX = x;
-        if ((m_boardMaxX < 0) || (x > m_boardMaxX))
+        if (x > m_boardMaxX)
             m_boardMaxX = x;
-        if ((m_boardMinY < 0) || (y < m_boardMinY))
+        if (y < m_boardMinY)
             m_boardMinY = y;
-        if ((m_boardMaxY < 0) || (y > m_boardMaxY))
+        if (y > m_boardMaxY)
             m_boardMaxY = y;
     }
 

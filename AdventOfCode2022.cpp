@@ -83,6 +83,21 @@ void ParseBigIntList(const std::string& st, BigIntList& intList, char delim)
     }
 }
 
+bool ParseNextBigInt(const char*& st, BigInt& num)
+{
+    num = 0;
+    bool foundNum = false;
+    while (isdigit(*st))
+    {
+        const BigInt digit = (BigInt)*st - '0';
+        num *= 10;
+        num += digit;
+        foundNum = true; 
+        ++st;
+    }
+    return foundNum;
+}
+
 bool StringHasDigits(const std::string& st, BigInt start, BigInt end)
 {
     if (end <= 0)

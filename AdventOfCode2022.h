@@ -197,6 +197,7 @@ typedef std::unordered_set<std::string> UnorderedStringSet;
 void ReadFileLines(const char* fileName, StringList& lines);
 void Tokenize(const std::string& st, StringList& tokens, char delim);
 void ParseBigIntList(const std::string& st, BigIntList& intList, char delim);
+bool ParseNextBigInt(const char*& st, BigInt& num);
 bool StringHasDigits(const std::string& st, BigInt start = 0, BigInt end = -1);
 bool StringHasLowerCaseAlphaNumeric(const std::string& st, BigInt start = 0, BigInt end = -1);
 bool StringIsIntWithinRange(const std::string& st, BigInt min, BigInt max, BigInt skipLastChars = 0);

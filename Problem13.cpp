@@ -159,7 +159,7 @@ private:
             if (isdigit(*s))
             {
                 BigInt num = 0;
-                ParseInt(s, num);
+                ParseNextBigInt(s, num);
                 node.nodeList.push_back(Node(num));
 
                 if (verbose)
@@ -194,18 +194,6 @@ private:
 
             assert(*s == ']');   // step past this in the above level
             break;
-        }
-    }
-
-    static void ParseInt(const char*& s, BigInt& num)
-    {
-        num = 0;
-        while (isdigit(*s))
-        {
-            const BigInt digit = (BigInt)*s - '0';
-            num *= 10;
-            num += digit;
-            ++s;
         }
     }
 

@@ -83,12 +83,19 @@ void ParseBigIntList(const std::string& st, BigIntList& intList, char delim)
     }
 }
 
-bool ParseNextBigInt(const char*& st, BigInt& num)
+bool ParseNextBigInt(const char*& st, BigInt& num, bool checkForNegation)
 {
     num = 0;
     bool foundNum = false;
+
+    bool isNegated = false;
     while (*st && !isdigit(*st))
+    {
+        if (checkForNegation)
+            isNegated = (*st == '-');
         ++st;
+    }
+
     while (isdigit(*st))
     {
         const BigInt digit = (BigInt)*st - '0';
@@ -97,6 +104,10 @@ bool ParseNextBigInt(const char*& st, BigInt& num)
         foundNum = true; 
         ++st;
     }
+
+    if (foundNum && isNegated)
+        num = -num;
+
     return foundNum;
 }
 

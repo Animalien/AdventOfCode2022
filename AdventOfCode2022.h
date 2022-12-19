@@ -29,6 +29,7 @@ typedef std::initializer_list<BigInt> BigIntInitList;
 typedef std::vector<BigInt> BigIntList;
 typedef std::vector<BigIntList> BigIntListList;
 typedef std::map<BigInt, BigInt> BigIntMap;
+typedef std::unordered_map<BigInt, BigInt> BigIntUnorderedMap;
 typedef std::set<BigInt> BigIntSet;
 typedef std::deque<BigInt> BigIntDeque;
 

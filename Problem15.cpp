@@ -10,8 +10,8 @@ public:
 
     virtual void Run() override
     {
-        RunOnData("Day15Example.txt", 10, true);
-        RunOnData("Day15Input.txt", 2000000, false);
+        RunOnData("Day15Example.txt", 10, false, true);
+        RunOnData("Day15Input.txt", 2000000, true, false);
     }
 
 private:
@@ -20,7 +20,75 @@ private:
     public:
         Row(BigInt y) : m_y(y) {}
 
-        void ConsiderSensorAndBeacon(BigInt sensorX, BigInt sensorY, BigInt beaconX, BigInt beaconY, bool verbose)
+        void Reset(BigInt newY)
+        {
+            m_y = newY;
+            m_spanList.clear();
+        }
+
+        bool HasAvailablePositionWithinRange(BigInt x0, BigInt x1, BigInt& posX) const
+        {
+            // this is like a compact version of the merge span operation down below, without actually merging
+
+            if (m_spanList.empty())
+            {
+                posX = x0;
+                assert(false);  // for the given problem, we shouldn't really hit this case
+                return true;
+            }
+
+            Span newSpan;
+            newSpan.x0 = x0;
+            newSpan.x1 = x1;
+
+            Span fittedSpan;
+
+            // test against the first span
+
+            const Span& firstSpan = m_spanList[0];
+            if (FitSpanToLeftInfiniteGap(newSpan, firstSpan.x0 - 1, fittedSpan))
+            {
+                posX = fittedSpan.x0;
+                return true;
+            }
+
+            // test against gaps between consecutive spans
+
+            if (m_spanList.size() > 1)
+            {
+                BigInt prevIndex = 0;
+                BigInt nextIndex = 1;
+
+                for (;;)
+                {
+                    const BigInt gapX0 = m_spanList[prevIndex].x1 + 1;
+                    const BigInt gapX1 = m_spanList[nextIndex].x0 - 1;
+                    if (FitSpanToGap(newSpan, gapX0, gapX1, fittedSpan))
+                    {
+                        posX = fittedSpan.x0;
+                        return true;
+                    }
+
+                    prevIndex = nextIndex;
+                    ++nextIndex;
+                    if (nextIndex >= (BigInt)m_spanList.size())
+                        break;
+                }
+            }
+
+            // test against the last span
+
+            const Span& lastSpan = m_spanList.back();
+            if (FitSpanToRightInfiniteGap(newSpan, lastSpan.x1 + 1, fittedSpan))
+            {
+                posX = fittedSpan.x0;
+                return true;
+            }
+
+            return false;
+        }
+
+        void ConsiderSensorAndBeacon(BigInt sensorX, BigInt sensorY, BigInt beaconX, BigInt beaconY, bool excludeBeaconFromSpans, bool verbose)
         {
             if (verbose)
                 printf(
@@ -63,7 +131,7 @@ private:
                         beaconDist);
             }
 
-            if (haveNewSpan && (beaconY == m_y))
+            if (excludeBeaconFromSpans && haveNewSpan && (beaconY == m_y))
             {
                 if (newSpan.x0 == newSpan.x1)
                     haveNewSpan = false;
@@ -286,14 +354,83 @@ private:
         }
     };
 
-    void RunOnData(const char* filename, BigInt rowY, bool verbose)
+    void RunOnData(const char* filename, BigInt testDimension, bool showPartTwoProgress, bool verbose)
     {
         printf("For file '%s'...\n", filename);
 
-        Row row(rowY);
-
         StringList lines;
         ReadFileLines(filename, lines);
+
+        BigIntList sensorXList;
+        BigIntList sensorYList;
+        BigIntList beaconXList;
+        BigIntList beaconYList;
+        ParseLinesToSensorAndBeaconPositions(lines, sensorXList, sensorYList, beaconXList, beaconYList);
+
+        // part 1
+
+        Row row(testDimension);
+        const BigInt numSensors = (BigInt)lines.size();
+        for (BigInt i = 0; i < numSensors; ++i)
+            row.ConsiderSensorAndBeacon(sensorXList[i], sensorYList[i], beaconXList[i], beaconYList[i], true /*excludeBeaconFromSpans*/, verbose);
+
+        printf(
+            "In the row %lld, there are %lld spaces where a beacon cannot be!\n\n", testDimension, row.CalcNumCoveredBySpans());
+
+        // part 2
+
+        if (showPartTwoProgress)
+            printf("|--------------------|\n|");
+
+        bool foundHiddenBeacon = false;
+        BigInt hiddenBeaconX = 0;
+        BigInt hiddenBeaconY = 0;
+
+        const BigInt minX = 0;
+        const BigInt maxX = testDimension * 2;
+        const BigInt minY = 0;
+        const BigInt maxY = maxX;
+        for (BigInt y = minY; y <= maxY; ++y)
+        {
+            if (showPartTwoProgress && ((y % ((maxY-minY)/20)) == 0))
+                printf("*");
+
+            row.Reset(y);
+            for (BigInt i = 0; i < numSensors; ++i)
+                row.ConsiderSensorAndBeacon(
+                    sensorXList[i], sensorYList[i], beaconXList[i], beaconYList[i], false /*excludeBeaconFromSpans*/, false);
+
+            BigInt posX = 0;
+            if (row.HasAvailablePositionWithinRange(minX, maxX, posX))
+            {
+                hiddenBeaconX = posX;
+                hiddenBeaconY = y;
+                foundHiddenBeacon = true;
+                break;
+            }
+        }
+
+        if (showPartTwoProgress)
+            printf("\n\n");
+
+        assert(foundHiddenBeacon);
+
+        const BigInt hiddenBeaconTuningFrequency = hiddenBeaconX * 4000000LL + hiddenBeaconY;
+        printf(
+            "Hidden beacon tuning frequency = %lld * %lld = %lld\n\n", hiddenBeaconX, hiddenBeaconY, hiddenBeaconTuningFrequency);
+    }
+
+    void ParseLinesToSensorAndBeaconPositions(
+        const StringList& lines,
+        BigIntList& sensorXList,
+        BigIntList& sensorYList,
+        BigIntList& beaconXList,
+        BigIntList& beaconYList)
+    {
+        sensorXList.reserve(lines.size());
+        sensorYList.reserve(lines.size());
+        beaconXList.reserve(lines.size());
+        beaconYList.reserve(lines.size());
 
         for (const std::string& line: lines)
         {
@@ -302,7 +439,7 @@ private:
             BigInt beaconX = 0;
             BigInt beaconY = 0;
 
-            const char* st = line.c_str() + 12;  // "Sensor at x="
+            const char* st = line.c_str() + 12;   // "Sensor at x="
             ParseNextBigInt(st, sensorX, true /*checkForNegation*/);
             ParseNextBigInt(st, sensorY, true /*checkForNegation*/);
 
@@ -310,10 +447,11 @@ private:
             ParseNextBigInt(st, beaconX, true /*checkForNegation*/);
             ParseNextBigInt(st, beaconY, true /*checkForNegation*/);
 
-            row.ConsiderSensorAndBeacon(sensorX, sensorY, beaconX, beaconY, verbose);
+            sensorXList.push_back(sensorX);
+            sensorYList.push_back(sensorY);
+            beaconXList.push_back(beaconX);
+            beaconYList.push_back(beaconY);
         }
-
-        printf("In the row %lld, there are %lld spaces where a beacon cannot be!\n\n", rowY, row.CalcNumCoveredBySpans());
     }
 };
 

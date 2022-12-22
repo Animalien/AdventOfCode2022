@@ -188,6 +188,27 @@ void MultiplyStringLists(StringList& origList, const StringList& rhsList)
 }
 
 
+////////////////////////////
+// Permutation Iterator
+
+void TestPermutationIterator(BigInt numEntries)
+{
+    BigIntListPermutationIterator permIter(1, numEntries);
+    printf("Testing permutations of %lld entries:\n", numEntries);
+    while (permIter.HaveMorePermutations())
+    {
+        const BigIntList& currPerm = permIter.GetCurrentPermutation();
+        printf("  ");
+        for (BigInt value: currPerm)
+            printf("%lld ", value);
+        printf("\n");
+
+        permIter.Step();
+    }
+    printf("\n");
+}
+
+
 
 ////////////////////////////
 ////////////////////////////

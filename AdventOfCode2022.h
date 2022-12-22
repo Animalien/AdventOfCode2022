@@ -413,16 +413,12 @@ public:
     {
         for (BigInt i = startIndex, value = firstValue; value<=lastValue; ++i, ++value)
             m_list.push_back(value);
-        m_iterationIndexList.resize(m_list.size() - 1, 0);
-        m_numItems = m_list.size();
         m_haveMorePermutations = true;
     }
     PermutationIterator(const std::vector<T>& sourceList, BigInt startIndex = 0)
     {
         for (BigInt i = startIndex; i < (BigInt)sourceList.size(); ++i)
             m_list.push_back(sourceList[i]);
-        m_iterationIndexList.resize(m_list.size() - 1, 0);
-        m_numItems = m_list.size();
         m_haveMorePermutations = true;
     }
 
@@ -432,43 +428,12 @@ public:
 
     void Step()
     {
-        T* const end = &(m_list[0]) + m_list.size();
-
-        BigInt indexToIncrement = m_iterationIndexList.size() - 1;
-
-        for (;;)
-        {
-            BigInt& indexValue = m_iterationIndexList[indexToIncrement];
-
-            T* middle = &(m_list[0]) + indexToIncrement;
-            const BigInt maxIndexValue = end - middle;
-            ++indexValue;
-            if (indexValue < maxIndexValue)
-            {
-                std::swap(middle[0], middle[indexValue]);
-                break;
-            }
-            else
-            {
-                std::rotate(middle, middle + 1, end);
-                indexValue = 0;
-
-                if (indexToIncrement <= 0)
-                {
-                    m_haveMorePermutations = false;
-                    break;
-                }
-
-                --indexToIncrement;
-            }
-        }
+        m_haveMorePermutations = std::next_permutation(m_list.begin(), m_list.end());
     }
 
 
 private:
     std::vector<T> m_list;
-    BigIntList m_iterationIndexList;
-    BigInt m_numItems = 0;
     bool m_haveMorePermutations = false;
 };
 
